@@ -1,10 +1,10 @@
 name:                temporal-graph
 version:             0.1.0.0
-github:              "githubuser/temporal-graph"
+github:              "eparodi/functional-temporal-graphs"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2019 Author name here"
+author:              "Eliseo Parodi Almaraz"
+maintainer:          "eparodialmaraz@gmail.com"
+copyright:           "2019 Eliseo Parodi Almaraz"
 
 extra-source-files:
 - README.md
@@ -17,10 +17,12 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/temporal-graph#readme>
+description:         Please see the README on GitHub at <https://github.com/eparodi/functional-temporal-graphs#readme>
 
 dependencies:
 - base >= 4.7 && < 5
+- array
+- containers
 
 library:
   source-dirs: src
