@@ -1,8 +1,10 @@
 module SimpleGraph.DFS where
 
 import Definitions
-import SimpleGraph.Graph
 import Tree
+
+import SimpleGraph.Graph
+
 import Data.Array
 import Data.Array.ST
 import Control.Monad.ST

@@ -1,5 +1,8 @@
 module Tree where
 
+import Definitions
+import Data.Array
+
 -- | The definition of a Tree. The Tree is defined as a Node whose children
 -- can be as many Trees as we want. This set of Trees is called Forest.
 data Tree a = Node a (Forest a) deriving (Show)
@@ -22,3 +25,9 @@ postorder (Node a ts) = postorderF ts ++ [a]
 -- flats the list.
 postorderF :: Forest a -> [a]
 postorderF ts = concat (map postorder ts)
+
+tabulate :: Bounds -> [Index] -> Table Int
+tabulate bnds vs = array bnds (zip vs [1..])
+
+preArr :: Bounds -> Forest Index -> Table Int
+preArr bnds ts = tabulate bnds (preorderF ts)
