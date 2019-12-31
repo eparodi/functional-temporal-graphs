@@ -158,6 +158,10 @@ containsS t lv = foldr (cont t) False lv
 edgeStreamFoldrVL :: [TemporalEdge] -> FoldrVLStateFunc s -> ST s (VertexListSet s) -> ST s (VertexListSet s)
 edgeStreamFoldrVL edgeStream f initialState = foldr f initialState edgeStream
 
+getTimeTable :: Table (Maybe Time, VertexList) -> Table (Maybe Time)
+getTimeTable = mapT getTime
+    where getTime _ (t, _) = t
+
 fastestPathDurationAux :: Index -> FoldrVLStateFunc s
 fastestPathDurationAux i (v1, v2, (t, l)) set =
     set >>= \m ->
@@ -183,13 +187,15 @@ fastestPathDurationAux i (v1, v2, (t, l)) set =
             else
                 return m
          
-fastestPathDuration :: TemporalGraph -> Index -> TimeInterval -> Table ((Maybe Time), VertexList)
+fastestPathDuration :: TemporalGraph -> Index -> TimeInterval -> Table (Maybe Time)
 fastestPathDuration g v (t1, t2) = 
-    runSTArray (
-        edgeStreamFoldrVL 
-            (trimByInterval (getEdgeStream g) (t1, t2))
-            (fastestPathDurationAux v)
-            (getInitialStateVL (bounds g) v)
+    getTimeTable (
+        runSTArray (
+            edgeStreamFoldrVL 
+                (trimByInterval (getEdgeStream g) (t1, t2))
+                (fastestPathDurationAux v)
+                (getInitialStateVL (bounds g) v)
+        )
     )
 
 dominatesD :: TimeDuple -> TimeDuple -> Bool
@@ -240,11 +246,13 @@ shortestPathDurationAux i (v1, v2, (t, l)) set =
             else
                 return m
          
-shortestPathDuration :: TemporalGraph -> Index -> TimeInterval -> Table ((Maybe Time), VertexList)
+shortestPathDuration :: TemporalGraph -> Index -> TimeInterval -> Table (Maybe Time)
 shortestPathDuration g v (t1, t2) = 
-    runSTArray (
-        edgeStreamFoldrVL 
-            (trimByInterval (getEdgeStream g) (t1, t2))
-            (shortestPathDurationAux v)
-            (getInitialStateVL (bounds g) v)
+    getTimeTable (
+        runSTArray (
+            edgeStreamFoldrVL 
+                (trimByInterval (getEdgeStream g) (t1, t2))
+                (shortestPathDurationAux v)
+                (getInitialStateVL (bounds g) v)
+        )
     )
