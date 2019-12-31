@@ -28,8 +28,14 @@ shrinkByGreaterValue t' e ls = let (_, _, (t, w)) = e in if (t + w) > t' then ls
 shrinkByLesserValue :: Time -> TemporalEdge -> [TemporalEdge] -> [TemporalEdge]
 shrinkByLesserValue t' e ls = let (_, _, (t, w)) = e in if t < t' then ls else (e:ls)
 
+shrinkByInterval :: TimeInterval -> TemporalEdge -> [TemporalEdge] -> [TemporalEdge]
+shrinkByInterval (t1, t2) e ls = let (_, _, (t, w)) = e in if t > t1 && (t + w) < t2 then (e:ls) else ls 
+
 trimByGreaterValue :: [TemporalEdge] -> Time -> [TemporalEdge]
 trimByGreaterValue e t' = foldr (shrinkByGreaterValue t') [] e
 
 trimByLesserValue :: [TemporalEdge] -> Time -> [TemporalEdge]
 trimByLesserValue e t' = foldr (shrinkByLesserValue t') [] e
+
+trimByInterval :: [TemporalEdge] -> TimeInterval -> [TemporalEdge]
+trimByInterval e i = foldr (shrinkByInterval i) [] e
