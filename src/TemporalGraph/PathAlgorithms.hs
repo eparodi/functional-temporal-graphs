@@ -46,7 +46,7 @@ numerateListOfLists :: [(Index, [Time])] -> Index -> [(Index, [(Index, Time)])]
 numerateListOfLists [] i = []
 numerateListOfLists ((idx, x):xs) i = (idx, (numerateList x i)) : (numerateListOfLists xs (i + length x))
 
-boundsList :: [(Index, [Time])] -> Index
+boundsList :: [(Index, [a])] -> Index
 boundsList [] = 0
 boundsList ((idx, x):xs) = (length x) + boundsList xs
 
@@ -84,10 +84,17 @@ getEdgesFromEdgesAndArrs vin vout ((u, v, interval):xs) = (f (vin!v) (vout!u) in
             | ti == (t + l) && to /= t = f ((ii, ti):vin) vout (t, l)
             | otherwise = f vin vout (t, l)
 
-getTransformedEdges :: TemporalGraph -> [TimeEdge]
+getTransformedEdges :: TemporalGraph -> (Bounds, [TimeEdge])
 getTransformedEdges g = 
     let vin = numerateListOfLists (vIn g) 1
-        vout = numerateListOfLists (vOut g) ((boundsList (vIn g)) + 1)
+        vout = numerateListOfLists (vOut g) ((boundsList vin) + 1)
+        bnds = (boundsList vin) + (boundsList vout) 
         vinArr = array (bounds g) vin
         voutArr = array (bounds g) vout
-        in (getEdgesFromNodeList vin) ++ (getEdgesFromNodeList vout) ++ (getEdgesFromNodeLists vin vout) ++ (getEdgesFromEdgesAndArrs vinArr voutArr (weightedEdges g))
+        in (
+            (1, bnds),
+            (getEdgesFromNodeList vin) ++ 
+            (getEdgesFromNodeList vout) ++
+            (getEdgesFromNodeLists vin vout) ++
+            (getEdgesFromEdgesAndArrs vinArr voutArr (weightedEdges g))
+        )
