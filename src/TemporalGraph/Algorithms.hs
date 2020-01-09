@@ -221,7 +221,7 @@ containsD t lv = foldr (cont t) False lv
     where cont :: Time -> (TimeDuple) -> Bool -> Bool
           cont t (d, a) _ = t == a
 
--- shortestPathDurationAux :: Index -> FoldrVLStateFunc s
+shortestPathDurationAux :: Index -> FoldrVLStateFunc s
 shortestPathDurationAux i (v1, v2, (t, l)) set =
     set >>= \m ->
     if i == v1 then

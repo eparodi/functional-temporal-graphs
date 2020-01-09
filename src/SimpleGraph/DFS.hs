@@ -51,3 +51,4 @@ generate g v = Node v (map (generate g) (g!v))
 -- | Executes the DFS algorithm in an initial order and then returns a forest.
 dfs :: Graph -> [Index] -> Forest Index
 dfs g vs = prune (bounds g) (map (generate g) vs)
+
