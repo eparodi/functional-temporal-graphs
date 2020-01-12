@@ -31,3 +31,11 @@ tabulate bnds vs = array bnds (zip vs [1..])
 
 preArr :: Bounds -> Forest Index -> Table Int
 preArr bnds ts = tabulate bnds (preorderF ts)
+
+mapTree :: (a -> b) -> Tree a -> Tree b
+mapTree f (Node a []) = Node (f a) []
+mapTree f (Node a xs) = Node (f a) (map (mapTree f) xs)
+
+foldTree :: (a -> b -> b) -> Tree a -> b -> b
+foldTree f (Node a []) z = f a z
+foldTree f (Node a xs) z = f a (foldr (foldTree f) z xs)
