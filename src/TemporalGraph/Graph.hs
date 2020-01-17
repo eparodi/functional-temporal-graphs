@@ -5,6 +5,7 @@ import Definitions
 import WeightedGraph.Graph
 
 import Data.List
+import Data.Array
 
 type Time = Int
 type Length = Int
@@ -39,3 +40,10 @@ trimByLesserValue e t' = foldr (shrinkByLesserValue t') [] e
 
 trimByInterval :: [TemporalEdge] -> TimeInterval -> [TemporalEdge]
 trimByInterval e i = foldr (shrinkByInterval i) [] e
+
+snapshot :: TemporalGraph -> Time -> TemporalGraph
+snapshot g t = buildWG (bounds g) (foldr (f t) [] (weightedEdges g))
+    where f :: Time -> TemporalEdge -> [TemporalEdge] -> [TemporalEdge]
+          f st (e1, e2, (t, l)) xs
+            | t > st && t < l = (e1, e2, (t, l)):xs
+            | otherwise = xs

@@ -23,6 +23,12 @@ dependencies:
 - base >= 4.7 && < 5
 - array
 - containers
+- happstack-server
+- csv
+- parsec
+- blaze-markup
+- blaze-html
+- mtl
 
 library:
   source-dirs: src
