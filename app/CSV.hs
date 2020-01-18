@@ -31,12 +31,6 @@ handleError _ = Nothing
 doWork :: CSV -> Maybe TemporalGraph
 doWork csv = Just (buildWG (getBounds (toTemporalEdges csv)) (toTemporalEdges csv))
 
--- handleError :: ParseError -> TemporalGraph
--- handleError csv = array (1, 1) [(1, [(1, (0, 0))])]
--- doWork :: CSV -> TemporalGraph
--- doWork csv = buildWG (getBounds (toTemporalEdges csv)) (toTemporalEdges csv)
-
-
 getGraph :: String -> String -> Maybe TemporalGraph
 getGraph filename csv = 
     let output = parseCSV filename csv

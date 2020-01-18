@@ -137,6 +137,8 @@ pathsToNode x nodes (Node (idx, t) ns) =
     let (y, _) = nodes!idx in [[idx] | x == y] ++ map (idx:) (pathsToNode x nodes =<< ns)
 
 getFunctionPath :: (Table (Index, Time) -> [Index] -> [Index] -> [Index]) -> Table (Index, Time) -> [[Index]] -> [Index]
+getFunctionPath f nodes [] = []
+getFunctionPath f nodes [x] = x
 getFunctionPath f nodes [x, y] = f nodes x y
 getFunctionPath f nodes (x:xs) = f nodes x (getFunctionPath f nodes xs)
 
@@ -155,35 +157,52 @@ earliestPathF n x y =
 
 latestPathF :: Table (Index, Time) -> [Index] -> [Index] -> [Index]
 latestPathF n x y =
-    let (_, t1) = n!(head x)
-        (_, t2) = n!(head y)
+    let (_, t1) = n!(x!!1)
+        (_, t2) = n!(y!!1)
     in
         if t1 >= t2 then x
         else y
 
 fastestPathF :: Table (Index, Time) -> [Index] -> [Index] -> [Index]
 fastestPathF n x y =
-    let (_, d1) = n!(head x)
-        (_, d2) = n!(head y)
+    let (_, d1) = n!(x!!1)
+        (_, d2) = n!(y!!1)
         (_, a1) = n!(last x)
-        (_, a2) = n!(last x)
+        (_, a2) = n!(last y)
     in
         if (a1 - d1) <= (a2 - d2) then x
         else y
 
-fPath :: (Table (Index, Time) -> [Index] -> [Index] -> [Index]) -> TemporalGraph ->  Index -> Index -> [Index]
+fPath :: (Table (Index, Time) -> [Index] -> [Index] -> [Index]) -> TemporalGraph ->  Index -> Index -> ([Index], Maybe TimeInterval)
 fPath f tg si fi = 
     let (g, n) = getTransformedGraph tg si
-        in getFunctionPath f n (pathsToNode fi n (generateTimeTree g si))
+        in translatePathToNodesAndGetInterval n (getFunctionPath f n (
+                pathsToNode fi n (
+                    generateTimeTree g si)))
 
-shortestPath :: TemporalGraph ->  Index -> Index -> [Index]
+shortestPath :: TemporalGraph ->  Index -> Index -> ([Index], Maybe TimeInterval)
 shortestPath = fPath shortestPathF
 
-earliestArrivalPath :: TemporalGraph ->  Index -> Index -> [Index]
+earliestArrivalPath :: TemporalGraph ->  Index -> Index -> ([Index], Maybe TimeInterval)
 earliestArrivalPath = fPath earliestPathF
 
-latestDeparturePath :: TemporalGraph ->  Index -> Index -> [Index]
+latestDeparturePath :: TemporalGraph ->  Index -> Index -> ([Index], Maybe TimeInterval)
 latestDeparturePath = fPath latestPathF
 
-fastestPath :: TemporalGraph ->  Index -> Index -> [Index]
+fastestPath :: TemporalGraph ->  Index -> Index -> ([Index], Maybe TimeInterval)
 fastestPath = fPath fastestPathF
+
+translatePathToNodesAndGetInterval :: Table (Index, Time) -> [Index] -> ([Index], Maybe TimeInterval)
+translatePathToNodesAndGetInterval n xs = (foldr (f n) [] xs, getInterval n xs)
+    where f :: Table (Index, Time) -> Index -> [Index] -> [Index]
+          f n x [] = let (idx, _) = n!x in [idx]
+          f n x (y:ys) = let (idx, _) = n!x in
+              if idx == y then (y:ys)
+              else (idx:(y:ys))
+          getInterval :: Table (Index, Time) -> [Index] -> Maybe TimeInterval
+          getInterval _ [] = Nothing
+          getInterval n xs =
+              let (_, st) = n!(xs !! 1)
+                  (_, ft) = n!(last xs)
+                  in Just (st, ft)
+                  

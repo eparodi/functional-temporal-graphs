@@ -50,3 +50,6 @@ snapshot g t = buildWG (bounds g) (foldr (f t) [] (weightedEdges g))
           f st (e1, e2, (t, l)) xs
             | t > st && t < l = (e1, e2, (t, l)):xs
             | otherwise = xs
+
+between :: TemporalGraph -> TimeInterval -> TemporalGraph
+between g i = buildWG (bounds g) (trimByInterval (getEdgeStream g) i)
