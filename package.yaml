@@ -1,4 +1,4 @@
-name:                temporal-graph
+name:                functional-temporal-graph
 version:             0.1.0.0
 github:              "eparodi/functional-temporal-graphs"
 license:             BSD3
@@ -34,7 +34,7 @@ library:
   source-dirs: src
 
 executables:
-  temporal-graph-exe:
+  funcional-temporal-graph-exe:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -42,10 +42,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - temporal-graph
+    - functional-temporal-graph
 
 tests:
-  temporal-graph-test:
+  functional-temporal-graph-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -53,4 +53,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - temporal-graph
+    - functional-temporal-graph
