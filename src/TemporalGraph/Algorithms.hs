@@ -11,6 +11,7 @@ import Control.Monad.ST
 -- Functions for Earliest Arrival Time and Latest Departure Time. 
 
 type TemporalSet s = STArray s Index (Maybe Time)
+type TimeAlgorithm = TemporalGraph -> Index -> TimeInterval -> Table (Maybe Int)
 
 getEmptyState :: Bounds -> ST s (TemporalSet s)
 getEmptyState bnds = newArray bnds Nothing
@@ -58,7 +59,7 @@ earliestArrivalAux (v1, v2, (t, l)) set =
             else
                 return m
 
-earliestArrivalTime :: TemporalGraph -> Index -> TimeInterval -> Table (Maybe Time)
+earliestArrivalTime :: TimeAlgorithm
 earliestArrivalTime g v (t1, t2)= 
     runSTArray (
         edgeStreamFoldr
@@ -70,21 +71,21 @@ earliestArrivalTime g v (t1, t2)=
 latestDepartureAux :: FoldrStateFunc s
 latestDepartureAux (v1, v2, (t, l)) set = 
     set >>= \m ->
-        getValue m v1 >>= \t1 ->
-            if (t + l) `maybeLTE` t1 then
-                getValue m v2 >>= \t2 ->
-                    if t `maybeGT` t2 then
-                        setValue m v2 t >>= \_ -> return m
+        getValue m v2 >>= \t2 ->
+            if (t + l) `maybeLTE` t2 then
+                getValue m v1 >>= \t1 ->
+                    if t `maybeGT` t1 then
+                        setValue m v1 t >>= \_ -> return m
                     else
                         return m
             else
                 return m
 
-latestDepartureTime :: TemporalGraph -> Index -> TimeInterval -> Table (Maybe Time)
+latestDepartureTime :: TimeAlgorithm
 latestDepartureTime g v (t1, t2)= 
     runSTArray (
         edgeStreamFoldr
-            (trimByLesserValue (getEdgeStream g) t1)
+            (trimByLesserValue (getReverseEdgeStream g) t1)
             latestDepartureAux
             (getInitialState (bounds g) v t2)
     )
@@ -187,7 +188,7 @@ fastestPathDurationAux i (v1, v2, (t, l)) set =
             else
                 return m
          
-fastestPathDuration :: TemporalGraph -> Index -> TimeInterval -> Table (Maybe Time)
+fastestPathDuration :: TimeAlgorithm
 fastestPathDuration g v (t1, t2) = 
     getTimeTable (
         runSTArray (
@@ -246,7 +247,7 @@ shortestPathDurationAux i (v1, v2, (t, l)) set =
             else
                 return m
          
-shortestPathDuration :: TemporalGraph -> Index -> TimeInterval -> Table (Maybe Time)
+shortestPathDuration :: TimeAlgorithm
 shortestPathDuration g v (t1, t2) = 
     getTimeTable (
         runSTArray (
@@ -256,3 +257,17 @@ shortestPathDuration g v (t1, t2) =
                 (getInitialStateVL (bounds g) v)
         )
     )
+
+algorithms = [
+    ("shortestPath", shortestPathDuration),
+    ("latestDeparturePath", latestDepartureTime),
+    ("earliestArrivalPath", earliestArrivalTime),
+    ("fastestPath", fastestPathDuration)
+    ]
+
+getAlgorithm :: String -> Maybe (TimeAlgorithm)
+getAlgorithm str = foldr (f str) Nothing algorithms
+    where f :: String -> (String, TimeAlgorithm) -> Maybe (TimeAlgorithm) -> Maybe (TimeAlgorithm)
+          f str (name, func) z
+            | name == str = Just func
+            | otherwise = z

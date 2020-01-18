@@ -17,6 +17,9 @@ mapT f t = array (bounds t) [(v, f v (t!v)) | v <- indices t]
 mapToList :: (Index -> a -> b) -> Table a -> [(Index, b)]
 mapToList f t = [(v, f v (t!v)) | v <- indices t]
 
+toList :: Table a -> [(Index, a)]
+toList t = [(v, (t!v)) | v <- indices t]
+
 -- | The minimum and maximum index of the Table. This is very useful for
 -- array operations.
 type Bounds = (Index, Index)

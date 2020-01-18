@@ -39,3 +39,9 @@ transposeWG g = buildWG (bounds g) (reverseWE g)
 -- edges that end in that node.
 indegreeW :: WeightedGraph a -> Table Int
 indegreeW g = outdegreeW (transposeWG g)
+
+nodes :: WeightedGraph a -> Int
+nodes g = length g
+
+edges :: WeightedGraph a -> Int
+edges g = length (weightedEdges g)

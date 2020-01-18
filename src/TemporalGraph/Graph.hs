@@ -20,8 +20,11 @@ compareWeightedEdges :: TemporalEdge -> TemporalEdge -> Ordering
 compareWeightedEdges (_, _, (t1, _)) (_, _, (t2, _)) | t1 < t2 = LT
     | otherwise = GT
 
+getReverseEdgeStream :: TemporalGraph -> [TemporalEdge]
+getReverseEdgeStream g = sortBy compareWeightedEdges (weightedEdges g)
+
 getEdgeStream :: TemporalGraph -> [TemporalEdge]
-getEdgeStream g = sortBy compareWeightedEdges (weightedEdges g)
+getEdgeStream g = reverse (getReverseEdgeStream g)
 
 shrinkByGreaterValue :: Time -> TemporalEdge -> [TemporalEdge] -> [TemporalEdge]
 shrinkByGreaterValue t' e ls = let (_, _, (t, w)) = e in if (t + w) > t' then ls else (e:ls)

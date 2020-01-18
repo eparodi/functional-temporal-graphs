@@ -4,6 +4,10 @@ body {
   background-color: #333;
 }
 
+.body-text-center {
+  text-align: center;
+}
+
 body {
   display: -ms-flexbox;
   display: flex;
@@ -13,7 +17,7 @@ body {
 }
 
 .cover-container {
-  max-width: 42em;
+  max-width: 60em;
 }
 
 .masthead {
@@ -63,6 +67,7 @@ body {
 .cover {
   padding: 0 1.5rem;
 }
+
 .cover .btn-lg {
   padding: .75rem 1.25rem;
   font-weight: 700;
@@ -70,4 +75,43 @@ body {
 
 .mastfoot {
   color: rgba(255, 255, 255, .5);
+}
+
+.dark {
+  background-color: #343a40;
+}
+
+.dark-border {
+  border: 1px solid rgba(0,0,0,0.80);
+}
+
+.card-body > h5 {
+  text-align: center;
+}
+
+.card {
+  text-align: initial;
+}
+
+.flex-evenly {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-evenly;
+  padding: 0;
+}
+
+.flex-evenly > li {
+  display: inline;
+}
+
+.alg-type-buttons {
+  text-align: initial;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  padding: 1rem 5rem;
+}
+
+.card {
+  margin: 1rem 0;
 }
