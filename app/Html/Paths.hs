@@ -20,6 +20,8 @@ import Definitions
 import Happstack.Server.Internal.Monads
 import Control.Monad (forM_)
 
+import CSV
+
 pathsFormHtml :: ServerPart Response
 pathsFormHtml = ok $ toResponse $
     baseTemplate "paths" (
@@ -66,18 +68,25 @@ pathsFormHtml = ok $ toResponse $
 pathsResultTemplate :: String -> ([Index], Maybe TimeInterval) -> Html
 pathsResultTemplate title (_, Nothing) =
     B.div ! class_ "card dark-border" $ do
-        B.div ! class_ "card-body dark" $ do
+        B.div ! class_ "card-body dark text-center" $ do
             h5 (toHtml title)
             p "No path."
 pathsResultTemplate title (idxs, Just (t1, t2)) =
     B.div ! class_ "card dark-border" $ do
-        B.div ! class_ "card-body dark" $ do
+        B.div ! class_ "card-body dark text-center" $ do
             h5 (toHtml title)
-            p (toHtml (show idxs))
-            p (toHtml $ do (show t1) ++ " - " ++ (show t2))
+            p (toHtml $ do "Path: " ++ pathToString idxs)
+            p (toHtml $ do "Time Interval: " ++ (show t1) ++ " - " ++ (show t2))
+
+pathToString :: [Index] -> String
+pathToString = foldr f ""
+    where f :: Index -> String -> String
+          f x "" = (show x)
+          f x str = (show x) ++ " -> " ++ str 
 
 pathsView :: String -> TemporalGraph -> Index -> Index -> ServerPartT IO Response
-pathsView fileName g from to = 
+pathsView fileName g from to =
+    -- let (g_, n) = getTransformedGraph g from in
     ok $ toResponse $ do
         baseTemplate "paths" ( do
             temporalGraphInfoTemplate fileName g
@@ -85,3 +94,6 @@ pathsView fileName g from to =
             pathsResultTemplate "Fastest Path"          (fastestPath g from to)
             pathsResultTemplate "Earliest Arrival Path" (earliestArrivalPath g from to)
             pathsResultTemplate "Latest Departure Path" (shortestPath g from to))
+            -- p (toHtml $ do show (pathsToNode to n (generateTimeTree g_ 1)))
+            -- p (toHtml $ do show (generateTimeTree g_ 1))
+            -- p (toHtml $ do show n))

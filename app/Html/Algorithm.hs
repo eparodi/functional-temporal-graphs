@@ -19,17 +19,17 @@ import Definitions
 import Happstack.Server.Internal.Monads
 import Control.Monad (forM_)
 
-algorithmHtml :: String -> TemporalGraph -> Table (Maybe Int) -> ServerPartT IO Response
-algorithmHtml fileName g result = 
+algorithmHtml :: String -> TemporalGraph -> Table (Maybe Int) -> String -> ServerPartT IO Response
+algorithmHtml fileName g result algName = 
     ok $ toResponse $
         baseTemplate "algorithms" (
-            algorithmBody fileName g result
+            algorithmBody fileName g result algName
         )
 
-algorithmBody :: String -> TemporalGraph -> Table (Maybe Int) -> Html
-algorithmBody fileName g result = do
+algorithmBody :: String -> TemporalGraph -> Table (Maybe Int) -> String -> Html
+algorithmBody fileName g result algName = do
     temporalGraphInfoTemplate fileName g
-    algorithmResultTemplate result
+    algorithmResultTemplate result algName
 
 algorithmFormHtml :: ServerPart Response
 algorithmFormHtml = ok $ toResponse $
@@ -70,12 +70,12 @@ algorithmFormHtml = ok $ toResponse $
                 input ! class_ "btn btn-primary" ! type_ "submit" ! value "Upload!"
     )
 
-algorithmResultTemplate :: Table (Maybe Int) -> Html
-algorithmResultTemplate result =
+algorithmResultTemplate :: Table (Maybe Int) -> String -> Html
+algorithmResultTemplate result algName =
     B.div ! class_ "card dark-border" $ do
         B.div ! class_ "card-body dark" $ do
-            h5 "Result"
-            ul $ forM_ (toList result) getLi
+            h5 (toHtml $ do "Result - " ++ algName)
+            ul ! class_ "container" $ forM_ (toList result) getLi
     where getLi :: (Index, (Maybe Int)) -> Html
-          getLi (idx, Nothing) = li $ do toHtml ((show idx) ++ ": No path!")
-          getLi (idx, Just r) = li $ do toHtml ((show idx) ++ ": " ++ (show r))
+          getLi (idx, Nothing) = li ! class_ "col-sm-2 col-6 li-block" $ do toHtml ((show idx) ++ ": No path!")
+          getLi (idx, Just r) = li ! class_ "col-sm-2 col-6 li-block" $ do toHtml ((show idx) ++ ": " ++ (show r))

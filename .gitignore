@@ -1,3 +1,4 @@
 .stack-work/
 functional-temporal-graph.cabal
 *~
+*.csv

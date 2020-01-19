@@ -67,13 +67,16 @@ getEdgesFromTimeLists :: [(Index, Time)] -> [(Index, Time)] -> [TimeEdge]
 getEdgesFromTimeLists [] [] = []
 getEdgesFromTimeLists [] _ = []
 getEdgesFromTimeLists _ [] = []
-getEdgesFromTimeLists ((idout, tout):ys) ((idin, tin):xs) 
-    | tout > tin = (idin, idout, 0) : (getEdgesFromTimeLists xs ys)
-    | otherwise = getEdgesFromTimeLists xs ((idout, tout):ys)
+getEdgesFromTimeLists ((idout, tout):os) ((idin, tin):is)
+    | tin <= tout = (idin, idout, 0) : (getEdgesFromTimeLists os ((idin, tin):is))
+    | otherwise = getEdgesFromTimeLists ((idout, tout):os) is
+    -- let (_, tinh) = (head is) in
+    --     if tout > tin && tout < tinh then (idin, idout, 0) : (getEdgesFromTimeLists os is)
+    --     else getEdgesFromTimeLists ((idout, tout):os) is
 
 getEdgesFromNodeLists :: [(Index, [(Index, Time)])] -> [(Index, [(Index, Time)])] -> [TimeEdge]
 getEdgesFromNodeLists [] [] = []
-getEdgesFromNodeLists ((idx, x):xs) ((idy, y):ys) = (getEdgesFromTimeLists x y) ++ (getEdgesFromNodeLists xs ys)
+getEdgesFromNodeLists ((ido, o):os) ((idi, i):is) = (getEdgesFromTimeLists (reverse o) (reverse i)) ++ (getEdgesFromNodeLists os is)
 
 getEdgesFromEdgesAndArrs :: Table [(Index, Time)] -> Table [(Index, Time)] -> [TemporalEdge] -> [TimeEdge]
 getEdgesFromEdgesAndArrs vin vout [] = []
@@ -178,7 +181,7 @@ fPath f tg si fi =
     let (g, n) = getTransformedGraph tg si
         in translatePathToNodesAndGetInterval n (getFunctionPath f n (
                 pathsToNode fi n (
-                    generateTimeTree g si)))
+                    generateTimeTree g 1)))
 
 shortestPath :: TemporalGraph ->  Index -> Index -> ([Index], Maybe TimeInterval)
 shortestPath = fPath shortestPathF

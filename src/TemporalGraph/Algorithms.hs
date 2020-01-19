@@ -122,7 +122,8 @@ insertF m v t = getValueVL m v >>= \(_, lv) -> setValueVL m v t lv
 getMaximumBeforeTime :: VertexList -> Time -> Maybe TimeDuple
 getMaximumBeforeTime lv t = foldr get Nothing lv
     where get :: TimeDuple -> Maybe TimeDuple -> Maybe TimeDuple
-          get (s, a) m = if a <= t then (Just (s, a)) else m
+          get (s, a) Nothing = if a <= t then (Just (s, a)) else Nothing
+          get (s, a) (Just (s', a')) = if a <= t && a > a' then (Just (s, a)) else Just (s', a')
 
 removeDominated :: (TimeDuple -> TimeDuple -> Bool) -> TimeDuple -> VertexList -> VertexList
 removeDominated f td lv = foldr remove [] lv
@@ -223,12 +224,12 @@ containsD t lv = foldr (cont t) False lv
           cont t (d, a) _ = t == a
 
 shortestPathDurationAux :: Index -> FoldrVLStateFunc s
-shortestPathDurationAux i (v1, v2, (t, l)) set =
+shortestPathDurationAux i (u, v, (t, l)) set =
     set >>= \m ->
-    if i == v1 then
-        insertDupleSVL m v1 (0, t) >>= \_ -> fpd m v1 v2 (t, l)
+    if i == u then
+        insertDupleSVL m u (0, t) >>= \_ -> fpd m u v (t, l)
     else
-        fpd m v1 v2 (t, l)
+        fpd m u v (t, l)
     where fpd :: VertexListSet s -> Index -> Index -> TimeInterval -> ST s (VertexListSet s)
           fpd m u v (t, l) = getValueVL m u >>= \(mt, lu) -> maxmaybe (getMaximumBeforeTime lu t) m v (t, l)
           maxmaybe :: Maybe TimeDuple -> VertexListSet s -> Index -> TimeInterval -> ST s (VertexListSet s)
@@ -259,15 +260,15 @@ shortestPathDuration g v (t1, t2) =
     )
 
 algorithms = [
-    ("shortestPath", shortestPathDuration),
-    ("latestDeparturePath", latestDepartureTime),
-    ("earliestArrivalPath", earliestArrivalTime),
-    ("fastestPath", fastestPathDuration)
+    ("shortestPath", (shortestPathDuration, "Shortest Path Length")),
+    ("latestDeparturePath", (latestDepartureTime, "Latest Departure Time")),
+    ("earliestArrivalPath", (earliestArrivalTime, "Earliest Departure Time")),
+    ("fastestPath", (fastestPathDuration, "Fastest Path Time"))
     ]
 
-getAlgorithm :: String -> Maybe (TimeAlgorithm)
+getAlgorithm :: String -> Maybe (TimeAlgorithm, String)
 getAlgorithm str = foldr (f str) Nothing algorithms
-    where f :: String -> (String, TimeAlgorithm) -> Maybe (TimeAlgorithm) -> Maybe (TimeAlgorithm)
+    where f :: String -> (String, (TimeAlgorithm, String)) -> Maybe (TimeAlgorithm, String) -> Maybe (TimeAlgorithm, String)
           f str (name, func) z
             | name == str = Just func
             | otherwise = z

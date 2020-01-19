@@ -115,3 +115,7 @@ body {
 .card {
   margin: 1rem 0;
 }
+
+.li-block {
+  display: inline-block;
+}
