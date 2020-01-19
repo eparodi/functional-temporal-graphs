@@ -13,9 +13,10 @@ toInt :: String -> Int
 toInt = read
 
 toTemporalEdges :: [Record] -> [TemporalEdge]
-toTemporalEdges xs = map f xs
-    where f :: Record -> TemporalEdge
-          f [v1, v2, t, l] = (toInt v1, toInt v2, (toInt t, toInt l))
+toTemporalEdges xs = foldr f [] xs
+    where f :: Record -> [TemporalEdge] -> [TemporalEdge]
+          f [v1, v2, t, l] z = (toInt v1, toInt v2, (toInt t, toInt l)) : z
+          f _ z = z
 
 getBounds :: [TemporalEdge] -> Bounds
 getBounds xs = (1, foldr f 0 xs)
