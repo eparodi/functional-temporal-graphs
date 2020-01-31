@@ -90,7 +90,7 @@ latestDepartureTime g v (t1, t2)=
             (getInitialState (bounds g) v t2)
     )
 
-type TimeDuple = (Time, Time)
+type TimeDuple = (Int, Int)
 type VertexList = [(TimeDuple)]
 type VertexListSet s = STArray s Index ((Maybe Time), VertexList)
 type FoldrVLStateFunc s = TemporalEdge -> ST s (VertexListSet s) -> ST s (VertexListSet s)
