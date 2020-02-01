@@ -125,7 +125,7 @@ getMaximumBeforeTime lv t = foldr get Nothing lv
           get (s, a) Nothing = if a <= t then (Just (s, a)) else Nothing
           get (s, a) (Just (s', a')) = if a <= t && a > a' then (Just (s, a)) else Just (s', a')
 
-removeDominated :: (TimeDuple -> TimeDuple -> Bool) -> TimeDuple -> VertexList -> VertexList
+removeDominated :: (DominationFunc) -> TimeDuple -> VertexList -> VertexList
 removeDominated f td lv = foldr remove [] lv
     where remove :: (TimeDuple) -> VertexList -> VertexList
           remove td' ls = 
@@ -134,16 +134,22 @@ removeDominated f td lv = foldr remove [] lv
             else
                 td':ls
 
-dominatesS :: TimeDuple -> TimeDuple -> Bool
+type DominationFunc = TimeDuple -> TimeDuple -> Bool
+type ResultSetter s = TimeDuple -> VertexListSet s -> Index -> ST s (VertexListSet s)
+type DupleModifier = Time -> Time -> VertexList -> VertexList
+type DupleInserter = TimeDuple -> VertexList -> VertexList
+type DupleContainer = Time -> VertexList -> Bool
+
+dominatesS :: DominationFunc
 dominatesS (s1, a1) (s2, a2) = (s1 > s2 && a1 <= a2) || (s1 == s2 && a1 < a2)
 
-insertDupleS :: TimeDuple -> VertexList -> VertexList
+insertDupleS :: DupleInserter
 insertDupleS (s1, a1) [] = [(s1, a1)]
 insertDupleS (s1, a1) ((s2, a2):ls)
     | a2 < a1 = (s1, a1) : ((s2, a2):ls)
     | otherwise = (s2, a2) : insertDupleS (s1, a1) ls
 
-modifyDupleS :: Time -> Time -> VertexList -> VertexList
+modifyDupleS :: DupleModifier
 modifyDupleS s a lv = foldr insert [] lv
     where insert :: (TimeDuple) -> VertexList -> VertexList
           insert (s', a') lv =
@@ -152,10 +158,33 @@ modifyDupleS s a lv = foldr insert [] lv
             else
                 (s', a') : lv
 
-containsS :: Time -> VertexList -> Bool
+containsS :: DupleContainer
 containsS t lv = foldr (cont t) False lv
     where cont :: Time -> (TimeDuple) -> Bool -> Bool
           cont t (s, a) _ = t == s
+
+dominatesD :: DominationFunc
+dominatesD (d1, a1) (d2, a2) = ((d1 + 1) < d2 && a1 <= a2) || ((d1 + 1) == d2 && a1 < a2)
+
+insertDupleD :: DupleInserter
+insertDupleD (d1, a1) [] = [(d1 + 1, a1)]
+insertDupleD (d1, a1) ((d2, a2):ls)
+    | a2 < a1 = (d1 + 1, a1) : ((d2, a2):ls)
+    | otherwise = (d2, a2) : insertDupleD (d1, a1) ls
+
+modifyDupleD :: DupleModifier
+modifyDupleD d a lv = foldr insert [] lv
+    where insert :: (TimeDuple) -> VertexList -> VertexList
+          insert (d', a') lv =
+            if a == a' then
+                (d + 1, a) : lv
+            else
+                (d', a') : lv
+
+containsD :: DupleContainer
+containsD t lv = foldr (cont t) False lv
+    where cont :: Time -> (TimeDuple) -> Bool -> Bool
+          cont t (d, a) _ = t == a
 
 edgeStreamFoldrVL :: [TemporalEdge] -> FoldrVLStateFunc s -> ST s (VertexListSet s) -> ST s (VertexListSet s)
 edgeStreamFoldrVL edgeStream f initialState = foldr f initialState edgeStream
@@ -164,30 +193,56 @@ getTimeTable :: Table (Maybe Time, VertexList) -> Table (Maybe Time)
 getTimeTable = mapT getTime
     where getTime _ (t, _) = t
 
-fastestPathDurationAux :: Index -> FoldrVLStateFunc s
-fastestPathDurationAux i (v1, v2, (t, l)) set =
-    set >>= \m ->
-    if i == v1 then
-        insertDupleSVL m v1 (t, t) >>= \_ -> fpd m v1 v2 (t, l)
+setTime :: ResultSetter s
+setTime (s, a) m v =
+    getValueVL m v >>= \(t, _) ->
+    if (a - s) `maybeLT` t then do
+        _ <- insertF m v (a - s)
+        return m
     else
-        fpd m v1 v2 (t, l)
-    where fpd :: VertexListSet s -> Index -> Index -> TimeInterval -> ST s (VertexListSet s)
-          fpd m u v (t, l) = getValueVL m u >>= \(mt, lu) -> maxmaybe (getMaximumBeforeTime lu t) m v (t, l)
-          maxmaybe :: Maybe TimeDuple -> VertexListSet s -> Index -> TimeInterval -> ST s (VertexListSet s)
-          maxmaybe Nothing m _ _ = return m
-          maxmaybe (Just (s, a)) m v (t, l) = 
-            getValueVL m v >>= \(_, vl) ->
-            if containsS s vl then
-                insertVL m v (removeDominated dominatesS (s, t + l) (modifyDupleS s (t + l) vl)) >>= \_ -> setTime (s, t + l) m v
-            else
-                insertVL m v (removeDominated dominatesS (s, t + l) (insertDupleS (s, t + l) vl)) >>= \_ -> setTime (s, t + l) m v
-          setTime :: TimeDuple -> VertexListSet s -> Index -> ST s (VertexListSet s)
-          setTime (s, a) m v =
-            getValueVL m v >>= \(t, _) ->
-            if (a - s) `maybeLT` t then
-                insertF m v (a - s) >>= \_ -> return m
-            else
-                return m
+        return m
+
+setDistance :: ResultSetter s
+setDistance (d, a) m v =
+    getValueVL m v >>= \(t, _) ->
+    if (d + 1) `maybeLT` t then do
+        _ <- insertF m v (d + 1)
+        return m
+    else
+        return m
+
+dominationAux :: Index -> Int -> DominationFunc -> ResultSetter s -> DupleModifier -> DupleInserter -> DupleContainer -> FoldrVLStateFunc s
+dominationAux i initialState domFunc setter modifier inserter container (v1, v2, (t, l)) set =
+    set >>= \m ->
+    if i == v1 then do
+        _ <- insertDupleSVL m v1 (initialState, t)
+        fpd m setter v1 v2 (t, l)
+    else
+        fpd m setter v1 v2 (t, l)
+    where fpd :: VertexListSet s -> ResultSetter s -> Index -> Index -> TimeInterval -> ST s (VertexListSet s)
+          fpd m setter u v (t, l) = 
+              do
+                (mt, lu) <- getValueVL m u
+                maxmaybe (getMaximumBeforeTime lu t) setter m v (t, l)
+          maxmaybe :: Maybe TimeDuple -> ResultSetter s -> VertexListSet s -> Index -> TimeInterval -> ST s (VertexListSet s)
+          maxmaybe Nothing _ m _ _ = return m
+          maxmaybe (Just (s, a)) setter m v (t, l) = 
+            do
+                (_, vl) <- getValueVL m v
+                if container s vl then do
+                    _ <- insertVL m v (removeDominated domFunc (s, t + l) (modifier s (t + l) vl))
+                    setter (s, t + l) m v
+                else do
+                    _ <- insertVL m v (removeDominated domFunc (s, t + l) (inserter (s, t + l) vl))
+                    setter (s, t + l) m v
+
+fastestPathDurationAux :: Index -> FoldrVLStateFunc s
+fastestPathDurationAux i (v1, v2, (t, l)) set = 
+    dominationAux i t dominatesS setTime modifyDupleS insertDupleS containsS (v1, v2, (t, l)) set
+
+shortestPathDurationAux :: Index -> FoldrVLStateFunc s
+shortestPathDurationAux i interval set = 
+    dominationAux i 0 dominatesD setDistance modifyDupleD insertDupleD containsD interval set
          
 fastestPathDuration :: TimeAlgorithm
 fastestPathDuration g v (t1, t2) = 
@@ -199,54 +254,6 @@ fastestPathDuration g v (t1, t2) =
                 (getInitialStateVL (bounds g) v)
         )
     )
-
-dominatesD :: TimeDuple -> TimeDuple -> Bool
-dominatesD (d1, a1) (d2, a2) = (d1 < d2 && a1 <= a2) || (d1 == d2 && a1 < a2)
-
-insertDupleD :: TimeDuple -> VertexList -> VertexList
-insertDupleD (d1, a1) [] = [(d1, a1)]
-insertDupleD (d1, a1) ((d2, a2):ls)
-    | a2 < a1 = (d1, a1) : ((d2, a2):ls)
-    | otherwise = (d2, a2) : insertDupleD (d1, a1) ls
-
-modifyDupleD :: Time -> Time -> VertexList -> VertexList
-modifyDupleD d a lv = foldr insert [] lv
-    where insert :: (TimeDuple) -> VertexList -> VertexList
-          insert (d', a') lv =
-            if a == a' then
-                (d, a) : lv
-            else
-                (d', a') : lv
-
-containsD :: Time -> VertexList -> Bool
-containsD t lv = foldr (cont t) False lv
-    where cont :: Time -> (TimeDuple) -> Bool -> Bool
-          cont t (d, a) _ = t == a
-
-shortestPathDurationAux :: Index -> FoldrVLStateFunc s
-shortestPathDurationAux i (u, v, (t, l)) set =
-    set >>= \m ->
-    if i == u then
-        insertDupleSVL m u (0, t) >>= \_ -> fpd m u v (t, l)
-    else
-        fpd m u v (t, l)
-    where fpd :: VertexListSet s -> Index -> Index -> TimeInterval -> ST s (VertexListSet s)
-          fpd m u v (t, l) = getValueVL m u >>= \(mt, lu) -> maxmaybe (getMaximumBeforeTime lu t) m v (t, l)
-          maxmaybe :: Maybe TimeDuple -> VertexListSet s -> Index -> TimeInterval -> ST s (VertexListSet s)
-          maxmaybe Nothing m v (t, l) = return m
-          maxmaybe (Just (d, a)) m v (t, l) = 
-            getValueVL m v >>= \(_, vl) ->
-            if containsD (t + l) vl then
-                insertVL m v (removeDominated dominatesD (d + 1, t + l) (modifyDupleD (d + 1) (t + l) vl)) >>= \_ -> setDistance (d + 1, t + l) m v
-            else
-                insertVL m v (removeDominated dominatesD (d + 1, t + l) (insertDupleD (d + 1, t + l) vl)) >>= \_ -> setDistance (d + 1, t + l) m v
-          setDistance :: TimeDuple -> VertexListSet s -> Index -> ST s (VertexListSet s)
-          setDistance (d, a) m v =
-            getValueVL m v >>= \(t, _) ->
-            if d `maybeLT` t then
-                insertF m v d >>= \_ -> return m
-            else
-                return m
          
 shortestPathDuration :: TimeAlgorithm
 shortestPathDuration g v (t1, t2) = 
