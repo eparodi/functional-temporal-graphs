@@ -48,7 +48,7 @@ snapshot :: TemporalGraph -> Time -> TemporalGraph
 snapshot g t = buildWG (bounds g) (foldr (f t) [] (weightedEdges g))
     where f :: Time -> TemporalEdge -> [TemporalEdge] -> [TemporalEdge]
           f st (e1, e2, (t, l)) xs
-            | t > st && t < l = (e1, e2, (t, l)):xs
+            | t < st && st < t + l = (e1, e2, (t, l)):xs
             | otherwise = xs
 
 between :: TemporalGraph -> TimeInterval -> TemporalGraph
